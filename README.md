@@ -2,6 +2,35 @@
 
 Small console app to explore the HiLo key assignment algorithm in EF Core.
 
+```cs
+static async Task Main(string[] args)
+{
+    Console.WriteLine("Hello World!");
+
+    var connectionString = @"Data Source=(LocalDb)\MSSQLLocalDB; Database=ExploreHiLo; Integrated Security=true;";
+    var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlServer(connectionString).Options;
+
+    using (var dbContext = new AppDbContext(options))
+    {
+        await dbContext.Database.MigrateAsync();
+
+        var entity = new EntityModel
+        {
+            Name = "Name #1",
+            Value = 10
+        };
+
+        Console.WriteLine($"entity.Id={entity.Id} (before AddAsync)");
+
+        await dbContext.AddAsync(entity);
+
+        Console.WriteLine($"entity.Id={entity.Id} (after AddAsync)");
+
+        await dbContext.SaveChangesAsync();
+    }
+}
+```
+
 The key point here is that the key values are taken from the `SqlServerSequence` in batches from the database and assigned each time the entity is added to the `AppDbContext`, even before saving.
 
 When the sequence batch is exhausted, then another batch is requested to the database.
@@ -34,11 +63,3 @@ public class AppDbContext : DbContext
 The next time the program is run, the key value will be **25** because the batch size is **10** and the remaining 9 from the first run are lost when the program ends.
 
 When using `HiLo` it's better to use the async version of add, for the times it's necessary to go to the database to get a new batch of sequence values.
-
-```cs
-Console.WriteLine($"entity.Id={entity.Id} (before AddAsync)");
-
-await dbContext.AddAsync(entity);
-
-Console.WriteLine($"entity.Id={entity.Id} (after AddAsync)");
-```
